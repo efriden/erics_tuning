@@ -1,6 +1,7 @@
 import pyaudio
 import numpy as np
 import pyqtgraph as pg
+import librosa
 from scipy.fftpack import fft
 from pyqtgraph.Qt import QtCore
 from pyqtgraph.Qt import QtGui
@@ -56,15 +57,17 @@ def update():
     data = stream.read(CHUNK, exception_on_overflow=False)
     data = np.frombuffer(data, dtype=np.int32)
     xf, yf = calculate_fft(data)
-
-    peak_index = np.argmax(yf)
-    peak_freq = xf[peak_index]
-    peak_magnitude = yf[peak_index]
-
     curve.setData(xf, yf)
 
-    peak_label.setText(f"{peak_freq:.2f} \n {peak_freq/2:.2f}")
-    peak_label.setPos(peak_freq, 0) # peak_magnitude)
+    pitch = librosa.yin(data.astype(np.float32), fmin=20, fmax=4200, sr=RATE)
+
+    # Get the most prominent pitch (ignore NaN values)
+    pitch = pitch[~np.isnan(pitch)]
+    if len(pitch) > 0:
+        detected_pitch = np.median(pitch)  # Average pitch over the frame
+
+    peak_label.setText(f"{detected_pitch:.2f}")
+    peak_label.setPos(detected_pitch, 0) # peak_magnitude)
 
 
 timer = QtCore.QTimer()
@@ -74,7 +77,7 @@ timer.start(10)  # Update interval in milliseconds
 # Start the application
 app.exec()
 
-# Clean up
+# Clean uppip 
 stream.stop_stream()
 stream.close()
 p.terminate()
