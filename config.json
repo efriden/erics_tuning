@@ -1,0 +1,65 @@
+{
+  "analyzer": {
+    "script": "analyzer/frequencyAnalysis.py",
+    "config": "analyzer/tuning_config.json"
+  },
+  "logging": {
+    "tui_log": "logs/tuning.log",
+    "analyzer_log": "logs/analyzer.log"
+  },
+  "presets": {
+    "Full Range": [
+      20.0,
+      5000.0
+    ],
+    "Piano Full": [
+      25.0,
+      4500.0
+    ],
+    "Bass Register": [
+      25.0,
+      300.0
+    ],
+    "Middle Register": [
+      120.0,
+      1200.0
+    ],
+    "Treble Register": [
+      400.0,
+      5000.0
+    ],
+    "A440 Focus": [
+      420.0,
+      460.0
+    ],
+    "Temperament": [
+      200.0,
+      800.0
+    ],
+    "Beat Detection": [
+      100.0,
+      1000.0
+    ],
+    "Unison Tuning": [
+      80.0,
+      2000.0
+    ],
+    "Cello": [
+      57.0,
+      240.0
+    ],
+    "Guitar": [
+      75.0,
+      350.0
+    ]
+  },
+  "analyzer_layout": {
+    "show_main_spectrum": true,
+    "show_beat_scatter": false,
+    "show_envelope": false,
+    "show_beat_history": false,
+    "show_main_spectrogram": true,
+    "show_beat_spectrogram": false,
+    "show_pitch_scatter": true
+  }
+}

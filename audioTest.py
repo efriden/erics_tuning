@@ -1,6 +1,9 @@
+import logging
 import pyaudio
 import numpy as np
 import sys
+
+logger = logging.getLogger(__name__)
 
 # Parameters
 FORMAT = pyaudio.paInt16  # 16-bit audio format
@@ -10,17 +13,71 @@ CHUNK = 1024              # Frames per buffer
 DURATION = 5              # Optional: max recording duration in seconds
 
 
+def get_audio_device_info():
+    """Get information about audio devices as a dictionary.
+    
+    Returns:
+        dict with keys:
+        - 'devices': list of device info dicts
+        - 'default_input': default input device info dict or None
+        - 'error': error message if any
+    """
+    result = {'devices': [], 'default_input': None, 'error': None}
+    
+    try:
+        p = pyaudio.PyAudio()
+        
+        # Get all input devices
+        for i in range(p.get_device_count()):
+            try:
+                device_info = p.get_device_info_by_index(i)
+                if device_info['maxInputChannels'] > 0:
+                    result['devices'].append({
+                        'index': i,
+                        'name': device_info['name'],
+                        'channels': device_info['maxInputChannels'],
+                        'rate': device_info['defaultSampleRate'],
+                    })
+            except Exception as e:
+                logger.warning(f"Couldn't query device {i}: {e}")
+        
+        # Get default input device
+        try:
+            default_input = p.get_default_input_device_info()
+            result['default_input'] = {
+                'index': default_input['index'],
+                'name': default_input['name'],
+                'channels': default_input['maxInputChannels'],
+                'rate': default_input['defaultSampleRate'],
+            }
+        except Exception as e:
+            logger.warning(f"Error getting default input device: {e}")
+            result['error'] = f"No default input device: {e}"
+        
+        p.terminate()
+    except Exception as e:
+        logger.exception("Error initializing PyAudio")
+        result['error'] = f"PyAudio error: {e}"
+    
+    return result
+
+
 def list_audio_devices(p):
-    print("\nAvailable audio input devices:")
+    """Legacy function for logging audio devices."""
+    logger.info("Available audio input devices:")
     for i in range(p.get_device_count()):
         try:
             device_info = p.get_device_info_by_index(i)
             if device_info['maxInputChannels'] > 0:
-                print(f"{i}: {device_info['name']} "
-                      f"(Channels: {device_info['maxInputChannels']}, "
-                      f"Rate: {device_info['defaultSampleRate']} Hz)")
-        except Exception as e:
-            print(f"Couldn't query device {i}: {e}")
+                logger.info(
+                    "%d: %s (Channels: %d, Rate: %s Hz)",
+                    i,
+                    device_info['name'],
+                    device_info['maxInputChannels'],
+                    device_info['defaultSampleRate'],
+                )
+        except Exception:
+            logger.exception("Couldn't query device %d", i)
 
 
 def main():
@@ -28,13 +85,13 @@ def main():
     list_audio_devices(p)
     try:
         default_input = p.get_default_input_device_info()
-        print("\nDefault Input Device:")
-        print(f"Index: {default_input['index']}")
-        print(f"Name: {default_input['name']}")
-        print(f"Max Input Channels: {default_input['maxInputChannels']}")
-        print(f"Default Sample Rate: {default_input['defaultSampleRate']} Hz")
-    except Exception as e:
-        print(f"\nError getting default input device: {e}")
+        logger.info("Default Input Device:")
+        logger.info("Index: %s", default_input['index'])
+        logger.info("Name: %s", default_input['name'])
+        logger.info("Max Input Channels: %s", default_input['maxInputChannels'])
+        logger.info("Default Sample Rate: %s Hz", default_input['defaultSampleRate'])
+    except Exception:
+        logger.exception("Error getting default input device")
         sys.exit(1)
 
     try:
@@ -48,12 +105,12 @@ def main():
             input_device_index=default_input['index'],
             start=False
         )
-    except Exception as e:
-        print(f"Error opening stream: {e}")
+    except Exception:
+        logger.exception("Error opening stream")
         p.terminate()
         sys.exit(1)
 
-    print("\nStarting recording... Press Ctrl+C to stop.")
+    logger.info("Starting recording... Press Ctrl+C to stop.")
     try:
         stream.start_stream()
         frame_count = 0
@@ -65,26 +122,29 @@ def main():
                 data = stream.read(CHUNK, exception_on_overflow=False)
                 samples = np.frombuffer(data, dtype=np.int16)
                 
-                # Print some stats
-                print(f"\rFrame {frame_count}: "
-                      f"Max: {np.max(samples):6d} "
-                      f"Min: {np.min(samples):6d} "
-                      f"RMS: {np.sqrt(np.mean(samples**2)):6.1f}", end='')
+                # Log some stats at debug level to avoid spamming stdout
+                logger.debug(
+                    "Frame %d: Max: %6d Min: %6d RMS: %6.1f",
+                    frame_count,
+                    int(np.max(samples)),
+                    int(np.min(samples)),
+                    float(np.sqrt(np.mean(samples**2))),
+                )
                 
                 frame_count += 1
                 
-            except IOError as e:
-                print(f"\nAudio overflow: {e}")
+            except IOError:
+                logger.exception("Audio overflow")
                 continue
             
             
 
     except KeyboardInterrupt:
-        print("\nUser interrupted recording.")
-    except Exception as e:
-        print(f"\nError during recording: {e}")
+        logger.info("User interrupted recording.")
+    except Exception:
+        logger.exception("Error during recording")
     finally:
-        print("\nCleaning up...")
+        logger.info("Cleaning up...")
         stream.stop_stream()
         stream.close()
         p.terminate()
