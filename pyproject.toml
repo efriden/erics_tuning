@@ -1,0 +1,18 @@
+[project]
+name = "erics-tuning"
+version = "0.1.0"
+description = "A tuning program using python, the librosa library and a textual tui."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "librosa>=0.11.0",
+    "numpy>=2.3.5",
+    "pyaudio>=0.2.14",
+    "pyqt5>=5.15.11",
+    "pyqtgraph>=0.14.0",
+    "scipy>=1.17.0",
+    "textual>=7.3.0",
+]
+
+[project.scripts]
+erics-tuning = "erics-tuning.__main__:main"

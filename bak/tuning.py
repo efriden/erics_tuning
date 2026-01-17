@@ -14,6 +14,10 @@ TUI keeps the terminal clean (no stdout/stderr noise).
 
 from __future__ import annotations
 
+
+# Start threads to capture output
+import threading
+
 from datetime import datetime
 import json
 import logging
@@ -421,12 +425,37 @@ class TuningApp(App):
             logger.info("Analyzer stopped")
             return
 
-        # Start it
         cmd = [sys.executable, str(ANALYZER_SCRIPT), "--config", str(CONFIG_PATH)]
         logger.info(f"Starting analyzer: {' '.join(cmd)}")
         try:
-            self.analyzer_proc = subprocess.Popen(cmd, cwd=str(ROOT))
+            self.analyzer_proc = subprocess.Popen(
+                cmd,
+                cwd=str(ROOT),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1  # Line buffered
+            )
             logger.info(f"Analyzer started with PID {self.analyzer_proc.pid}")
+            
+            def log_output(pipe, log_func):
+                for line in iter(pipe.readline, ''):
+                    if line:
+                        log_func(line.rstrip())
+                pipe.close()
+            
+            threading.Thread(
+                target=log_output,
+                args=(self.analyzer_proc.stdout, logger.info),
+                daemon=True
+            ).start()
+            
+            threading.Thread(
+                target=log_output,
+                args=(self.analyzer_proc.stderr, logger.error),
+                daemon=True
+            ).start()
+            
         except Exception as exc:
             logger.error(f"Failed to start analyzer: {exc}")
             self.query_one("#analyzer_status", Label).update(

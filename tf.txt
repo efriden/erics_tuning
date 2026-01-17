@@ -1,0 +1,45 @@
+/opt/local/libexec/llvm-14/lib/cmake
+├── llvm
+│   ├── AddLLVM.cmake
+│   ├── AddLLVMDefinitions.cmake
+│   ├── AddOCaml.cmake
+│   ├── AddSphinxTarget.cmake
+│   ├── CheckAtomic.cmake
+│   ├── CheckCompilerVersion.cmake
+│   ├── ChooseMSVCCRT.cmake
+│   ├── CoverageReport.cmake
+│   ├── CrossCompile.cmake
+│   ├── DetermineGCCCompatible.cmake
+│   ├── FindFFI.cmake
+│   ├── FindGRPC.cmake
+│   ├── FindLibpfm.cmake
+│   ├── FindOCaml.cmake
+│   ├── FindSphinx.cmake
+│   ├── FindTerminfo.cmake
+│   ├── FindZ3.cmake
+│   ├── GenerateVersionFromVCS.cmake
+│   ├── GetErrcMessages.cmake
+│   ├── GetLibraryName.cmake
+│   ├── HandleLLVMOptions.cmake
+│   ├── HandleLLVMStdlib.cmake
+│   ├── LLVM-Build.cmake
+│   ├── LLVM-Config.cmake
+│   ├── LLVMCheckLinkerFlag.cmake
+│   ├── LLVMConfig.cmake
+│   ├── LLVMConfigExtensions.cmake
+│   ├── LLVMConfigVersion.cmake
+│   ├── LLVMDistributionSupport.cmake
+│   ├── LLVMExports-release.cmake
+│   ├── LLVMExports.cmake
+│   ├── LLVMExternalProjectUtils.cmake
+│   ├── LLVMInstallSymlink.cmake
+│   ├── LLVMProcessSources.cmake
+│   ├── TableGen.cmake
+│   ├── TensorFlowCompile.cmake
+│   ├── UseLibtool.cmake
+│   └── VersionFromVCS.cmake
+└── polly
+    ├── PollyConfig.cmake
+    └── PollyExports-all.cmake
+
+3 directories, 40 files
