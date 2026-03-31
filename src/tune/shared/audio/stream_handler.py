@@ -67,7 +67,6 @@ class StreamHandler:
             npt.NDArray[np.float32]: The latest chunk of audio_data. The data is not deleted, so another thread calling this function might get the same chunk.
 
         """
-        logger.debug("get_chunk")
         chunk = self._stream_buffer.read()
         if chunk is None:
             logger.warning("empty stream_buffer")

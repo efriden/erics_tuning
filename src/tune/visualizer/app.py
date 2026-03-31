@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 from time import sleep
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
-from tune.util.transponder import Transponder
-from tune.util.logging import setup_logging
+from tune.shared.transponder.transponder import Transponder
+from tune.shared.util.setup_logging import setup_logging
 from tune.visualizer.panels.base import AbstractTunePanel, PanelSettings
 from tune.visualizer.panels.fourier import FourierPanel
 

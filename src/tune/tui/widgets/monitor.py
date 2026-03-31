@@ -25,6 +25,8 @@ MONITOR_AUDIO_SETTINGS: AudioSettings = AudioSettings(
 
 MONITOR_UPDATES_PER_CYCLE: int = 30
 
+# todo: add a 'sticky' max indicator.
+
 
 class Monitor(Static):
     _stream: StreamHandler | None

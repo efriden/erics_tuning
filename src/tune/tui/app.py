@@ -1,9 +1,11 @@
+from tune.tui.workers.log_reader import NewLogLine
 from .screens.audio_devices import AudioDeviceSelectionScreen
 from .screens.piano_frequencies import PianoFrequenciesScreen
 from .screens.range_preset import RangePresetScreen
 from .screens.main_screen import MainScreen
 from tune.shared.audio.pyaudio_handler import PyAudioHandler
 from tune.shared.util.setup_logging import setup_logging, log_run_start
+from tune.tui.widgets.process_window import ProcessWindow
 
 from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer, Placeholder
@@ -44,6 +46,15 @@ class TUIApp(App):
 
     def on_unmount(self) -> None:
         PyAudioHandler.terminate()
+        for process in self.query(ProcessWindow):
+            process.stop()  # todo: this will run a worker with async processes - maybe it wont be allowed to finish.
+
+    def on_new_log_line(self, message: NewLogLine) -> None:
+        log_line = message.log_line
+        for screen in self.app.screen_stack:
+            for window in screen.query(ProcessWindow):
+                if window.process_name in log_line.sender:
+                    window.add_log_line(log_line)
 
 
 def main() -> None:

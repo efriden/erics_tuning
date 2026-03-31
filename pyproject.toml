@@ -21,7 +21,7 @@ dependencies = [
 visualizer = 'tune.visualizer.app:main'
 analyzer = 'tune.analyzer.main:main'
 broker = 'tune.shared.transponder.broker:main'
-tune = 'tune.tui.app:main.py'
+tune = 'tune.tui.app:main'
 
 [tool.uv]
 package=true
