@@ -103,7 +103,7 @@ def get_range_presets() -> dict[str, tuple[float, float]]:
     data: dict[str, list[float]] = get_settings("range_presets")
 
     range_presets: dict[str, tuple[float, float]] = {
-        key: tuple(value) for key, value in data.items()
+        key: tuple(values) for key, values in data.items()
     }
 
     return range_presets

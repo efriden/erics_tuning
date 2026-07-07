@@ -1,57 +1,48 @@
-"""Audio analyzer"""
+"""Audio analyzer handler. Often -- but not always -- a singleton. Holds a set of analyzers, an audio stream, a transponder and handles threads."""
 
-import aubio
 import numpy as np
-import numpy.typing as npt
-import time
+from numpy.typing import NDArray
 from threading import Event
 
 from tune.shared.audio.stream_handler import StreamHandler
 from tune.shared.transponder.transponder import Transponder
-from tune.shared.util.setup_logging import setup_logging, log_run_start
-
+from tune.shared.transponder.packet import AbstractPacket
+from tune.shared.util.output_manager import output_manager as out
 from tune.analyzer.analyzers.base import AbstractAnalyzer
 from tune.analyzer.analyzers.normalized_fft import NormalizedFFT
 
-from logging import Logger, getLogger
 
-logger: Logger = getLogger(__name__)
-
-
-class TuneAnalyzerHandler:
+class AnalyzerHandler:
     _stream: StreamHandler
     _transponder: Transponder
     _analyzers: list[AbstractAnalyzer]
     _shutdown_flag: Event
 
     def __init__(self, stream: StreamHandler | None = None) -> None:
-        logger.debug(f"__init__ stream={stream!r}")
+        out.debug(f"__init__ stream={stream!r}")
         self._shutdown_flag = Event()
         self._stream: StreamHandler = stream if stream else StreamHandler()
-        pubs: list[str] = ["fft"]
-        subs: list[str] = []
-        pubsubs: list[str] = ["string"]
-        self._transponder: Transponder = Transponder(pubs, subs, pubsubs)
-        self._analyzers = []
+        self._transponder: Transponder = Transponder(pubs=["fft"], subs=[])
+        self._analyzers: list[AbstractAnalyzer] = []
 
     def add_analyzer(self, analyzer: AbstractAnalyzer) -> None:
-        logger.debug(f"add_analyzer analyzer={analyzer!r}")
+        out.debug(f"add_analyzer analyzer={analyzer!r}")
         self._analyzers.append(analyzer)
-        analyzer.register_in(self.get_chunk)
+        analyzer.register_in(self._stream.get_chunk)
         analyzer.register_out(self.put)
 
     def start(self) -> None:
-        logger.debug("start")
-        logger.debug("TuneAnalyzer object starting TuneStream object.")
+        out.debug("start")
+        out.debug("TuneAnalyzer object starting TuneStream object.")
         self._stream.start()
-        logger.debug("TuneAnalyzer object starting Transponder object.")
+        out.debug("TuneAnalyzer object starting Transponder object.")
         self._transponder.start()
-        logger.debug("TuneAnalyzer object starting subanalyzers.")
+        out.debug("TuneAnalyzer object starting subanalyzers.")
         for analyzer in self._analyzers:
             analyzer.start()
 
     def stop(self) -> None:
-        logger.debug("stop")
+        out.debug("stop")
         self._shutdown_flag.set()
         for analyzer in self._analyzers:
             analyzer.stop()
@@ -59,38 +50,33 @@ class TuneAnalyzerHandler:
         self._stream.stop()
 
     def wait(self) -> None:
-        logger.debug("wait")
+        out.debug("wait")
         self._shutdown_flag.wait()
 
-    def get_chunk(self) -> npt.NDArray[np.float32]:
-        return self._stream.get_chunk()
-
-    def put(self, topic, payload) -> None:
-        self._transponder.put(topic, payload)
+    def put(self, packet: AbstractPacket) -> None:
+        self._transponder.put(packet)
 
 
 def main() -> None:
-    setup_logging(root_level=10)
-    log_run_start()
-    logger.info("Starting TuneAnalyzer app")
+    out.info("Starting Analyzer app")
 
-    logger.debug("Creating TuneAnalyzer object.")
-    analyzer = TuneAnalyzerHandler()
+    out.debug("Creating AnalyzerHandler object.")
+    analyzer_handler = AnalyzerHandler()
 
-    logger.debug("Creating Analyzer objects.")
-    analyzer.add_analyzer(NormalizedFFT(analyzer._stream.settings))
+    out.debug("Creating subanalyzer objects.")
+    analyzer_handler.add_analyzer(analyzer=NormalizedFFT())
 
-    logger.debug("Starting TuneAnalyzer object (will also start pyaudio stream)")
+    out.debug("Starting TuneAnalyzer object (will also start pyaudio stream)")
     try:
-        analyzer.start()
-        analyzer.wait()
+        analyzer_handler.start()
+        analyzer_handler.wait()
     except KeyboardInterrupt:
         pass
     finally:
-        analyzer.stop()
+        analyzer_handler.stop()
 
-    logger.info("Shutting down analyzer app.")
-    analyzer.stop()
+    out.info("Shutting down analyzer app.")
+    analyzer_handler.stop()
 
 
 if __name__ == "__main__":

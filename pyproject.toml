@@ -5,10 +5,10 @@ description = "A tuning application."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "aubio>=0.4.9",
     "msgpack>=1.1.2",
     "numpy>=2.3.5",
     "pyaudio>=0.2.14",
+    "pydantic>=2.13.4",
     "pyqt5>=5.15.11",
     "pyqtgraph>=0.14.0",
     "pyyaml>=6.0.3",
