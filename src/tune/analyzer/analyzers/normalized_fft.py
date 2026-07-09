@@ -4,7 +4,7 @@ import numpy as np
 from scipy.fft import fft, fftfreq
 from time import sleep
 
-from tune.shared.util.config import config, AudioSettings
+from tune.shared.util.config import AudioSettings
 from tune.shared.util.output_manager import output_manager as out
 
 

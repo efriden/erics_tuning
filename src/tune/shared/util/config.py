@@ -15,7 +15,7 @@ class ZMQSettings(BaseModel):
 class AudioSettings(BaseModel):
     buffer_size: int
     channels: int
-    samplerate: int
+    sample_rate: int
 
 
 class AnalyzerDefaults(BaseModel):
