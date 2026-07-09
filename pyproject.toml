@@ -1,0 +1,31 @@
+[project]
+name = "erics-tuning"
+version = "0.2.1"
+description = "A tuning application."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "librosa>=0.11.0",
+    "msgpack>=1.1.2",
+    "numpy>=2.3.5",
+    "pyaudio>=0.2.14",
+    "pyqt5>=5.15.11",
+    "pyqtgraph>=0.14.0",
+    "pyyaml>=6.0.3",
+    "pyzmq>=27.1.0",
+    "scipy>=1.13.0",
+    "textual>=7.3.0",
+    "textual-pyfiglet>=1.0.0",
+]
+
+[project.scripts]
+visualizer = 'tune.visualizer.app:main'
+analyzer = 'tune.analyzer.main:main'
+broker = 'tune.shared.transponder.broker:main'
+tune = 'tune.tui.app:await_main'
+
+[tool.uv]
+package=true
+
+[tool.setuptools.packages.find] 
+where = ["src"]

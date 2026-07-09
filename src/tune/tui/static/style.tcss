@@ -1,0 +1,3 @@
+.bordered {
+    border: round black;
+  }
