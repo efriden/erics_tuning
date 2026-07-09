@@ -1,0 +1,28 @@
+audio_settings:
+  buffer_size: 1024
+  channels: 1
+  samplerate: 44100
+
+range_presets:
+  Full Range: [20.0, 5000.0]
+  Piano Full: [25.0, 4500.0]
+  Bass Register: [25.0, 300.0]
+  Middle Register: [120.0, 1200.0]
+  Treble Register: [400.0, 5000.0]
+  A440 Focus: [420.0, 460.0]
+  Temperament: [200.0, 800.0]
+  Beat Detection: [100.0, 1000.0]
+  Unison Tuning: [80.0, 2000.0]
+  Cello: [57.0, 240.0]
+  Guitar: [75.0, 350.0]
+
+analyzer:
+  default_sleep_seconds: 0.02
+
+zmq_settings:
+  pub_data_uri: 'tcp://127.0.0.1:5555'
+  sub_data_uri: 'tcp://127.0.0.1:5556'
+  pub_control_uri: 'tcp://127.0.0.1:5557'
+  sub_control_uri: 'tcp://127.0.0.1:5558'
+  sub_poller_timeout_ms: 100
+  pub_sleep_seconds: 0.01
