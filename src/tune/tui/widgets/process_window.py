@@ -1,3 +1,5 @@
+from __future__ import annotations
+from textual.message import Message
 from rich.text import Text
 from textual.worker import Worker, WorkerState
 from tune.tui.workers.process_runner import (
@@ -21,6 +23,16 @@ from logging import getLogger
 logger = getLogger(__name__)
 
 
+class RegisterProcess(Message):
+    process: ProcessWindow
+    action: str
+
+    def __init__(self, process: ProcessWindow, action: str) -> None:
+        super().__init__()
+        self.process = process
+        self.action = action
+
+
 class ProcessWindow(Static):
     DEFAULT_CSS = """
     ProcessWindow {
@@ -32,19 +44,27 @@ class ProcessWindow(Static):
     }
     .launcher {
         height: 100%;
-        width: 8;
+        width: 4;
     }
     """
     process_name: str
     process_runner: ProcessRunner
 
     def __init__(self, config: ProcessConfig):
+        """
+        This right now pulls double duty - it acts as a wrapper for a process runner,
+        and is a textual widget with a log view.
+        Those concerns should probably be separated.
+
+        config:
+
+        """
         super().__init__(id=f"{config.name}-window")
         self.process_name: str = config.name
         if config.use_async:
-            self.process_runner = AsyncProcessRunner(config)
+            self.process_runner = AsyncProcessRunner(config, self.app)
         else:
-            self.process_runner = SyncProcessRunner(config)
+            self.process_runner = SyncProcessRunner(config, self.app)
         self.run_worker(tail_log(self.app))
 
     def compose(self) -> ComposeResult:
@@ -66,6 +86,8 @@ class ProcessWindow(Static):
         log.write(log_line.rich_line)
 
     def _light(self, status: Status) -> None:
+        if not self.is_attached:
+            return
         self.query_one(StatusLight).status = status
         if status == Status.RUNNING:
             button = self.query_one(Button)
@@ -76,32 +98,57 @@ class ProcessWindow(Static):
             button.variant = "success"
             button.label = "Launch"
 
-    def start(self) -> None:
+    async def start(self) -> None:
         self._light(Status.LAUNCHING)
         start_func = self.process_runner.start
         if iscoroutinefunction(start_func):
-            self.run_worker(start_func(), exclusive=True, name="starter")
+            try:
+                await start_func()
+                self._light(Status.RUNNING)
+                self.post_message(RegisterProcess(process=self, action="register"))
+            except Exception as e:
+                logger.error(
+                    f"Exception when starting process {self.process_name}: {e}"
+                )
+                self._light(Status.FAILED)
         else:
             try:
                 start_func()
                 self._light(Status.RUNNING)
+                self.post_message(RegisterProcess(process=self, action="register"))
             except Exception as e:
                 logger.error(
                     f"Exception when starting process {self.process_name}: {e}"
                 )
                 self._light(Status.FAILED)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
+        """
+        Stop the bound process.
+        This is async so it can be awaited when TUI shuts down.
+
+        """
         stop_func = self.process_runner.stop
         if iscoroutinefunction(stop_func):
-            self.run_worker(stop_func(), exclusive=True, name="stopper")
-            return
-        try:
-            stop_func()
-            self._light(Status.OFF)
-        except Exception as e:
-            logger.error(f"Exception when stopping process {self.process_name}: {e}")
-            self._light(Status.FAILED)
+            try:
+                await stop_func()
+                self._light(Status.OFF)
+                self.post_message(RegisterProcess(process=self, action="unregister"))
+            except Exception as e:
+                logger.error(
+                    f"Exception when stopping process {self.process_name}: {e}"
+                )
+                self._light(Status.FAILED)
+        else:
+            try:
+                stop_func()
+                self._light(Status.OFF)
+                self.post_message(RegisterProcess(process=self, action="unregister"))
+            except Exception as e:
+                logger.error(
+                    f"Exception when stopping process {self.process_name}: {e}"
+                )
+                self._light(Status.FAILED)
 
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
         if event.worker.name == "starter" or event.worker.name == "stopper":
@@ -121,6 +168,6 @@ class ProcessWindow(Static):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.label:
             case "Launch":
-                self.start()
+                self.run_worker(self.start())
             case "Stop":
-                self.stop()
+                self.run_worker(self.stop())

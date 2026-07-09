@@ -164,7 +164,7 @@ class Transponder:
             thread.start()
             logger.debug(f"Thread {thread.name} started.")
 
-        logger.debug("threads started, transponder is ready to roll.")
+        logger.debug("Threads started, transponder is ready to roll.")
 
     def stop(self) -> None:
         """Stop the transponder.
@@ -191,7 +191,12 @@ class Transponder:
         logger.info("Transponder succesfully closed.")
 
     def put(self, topic: str, payload: object) -> None:
-        entry = self._registry[SocketType.PUB][topic]
+        entry = self._registry[SocketType.PUB].get(topic, None)
+        if entry is None:
+            logger.warning(
+                f"Topic {topic} unregistered, no object given to transponder"
+            )
+            return
         if not isinstance(payload, entry.spec.payload_type):
             raise TypeError("Bad payload")
         if (
@@ -200,7 +205,7 @@ class Transponder:
             and payload.dtype != entry.spec.dtype
         ):
             logger.warning(
-                f"Payload mismatch. in: {payload.dtype}, spec: {entry.spec.dtype}"
+                f"Payload mismatch. topic: {topic}, in_dtype: {payload.dtype}, spec_dtype: {entry.spec.dtype}"
             )
             raise TypeError("Bad payload dtype")
         try:
@@ -218,7 +223,13 @@ class Transponder:
         Returns:
             payload
         """
-        entry: RegistryEntry = self._registry[SocketType.SUB][topic]
+        entry: RegistryEntry | None = self._registry[SocketType.SUB].get(topic, None)
+
+        if entry is None:
+            logger.warning(
+                f"topic {topic} unregistered, no object taken from transponder"
+            )
+            return None
         try:
             o = entry.queue.get_nowait()
             return o

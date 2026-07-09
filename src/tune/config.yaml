@@ -37,11 +37,6 @@ topics:
     dtype: float32
     ndim: 2
     max_shape: [2, 8192]
-  spectrogram:
-    payload_type: ndarray
-    dtype: float32
-    ndim: 2
-    max_shape: [128, 4096]
   string:
     payload_type: str
   analyzer_status:
@@ -50,3 +45,23 @@ topics:
     payload_type: str
   broker_status:
     payload_type: str
+  pitch:
+    payload_type: ndarray
+    dtype: float32
+    ndim: 1
+    max_shape: [2,]
+  peaks:
+    payload_type: ndarray
+    dtype: float32
+    ndim: 1
+    max_shape: [2,]
+  peak_parameters:
+    payload_type: ndarray
+    dtype: float32
+    ndim: 1
+    max_shape: [3,]
+  piano_string:
+    payload_type: ndarray
+    dtype: float32
+    ndim: 1
+    max_shape: [2,]

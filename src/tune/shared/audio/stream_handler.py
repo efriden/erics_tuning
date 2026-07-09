@@ -1,5 +1,6 @@
-from tune.shared.util.config_loader import AudioSettings, get_audio_settings
-from tune.shared.audio.stream_buffer import StreamBuffer
+from tune.shared.types.settings_specs import AudioSettings
+from tune.shared.util.config_loader import get_audio_settings
+from tune.shared.types.array_buffer import ArrayBuffer
 from tune.shared.audio.pyaudio_handler import PyAudioHandler
 from tune.shared.audio.device_info import DeviceInfo
 from typing import Any
@@ -24,7 +25,7 @@ class StreamHandler:
     device: DeviceInfo
     settings: AudioSettings
     _stream: pyaudio.Stream
-    _stream_buffer: StreamBuffer
+    _stream_buffer: ArrayBuffer
 
     def __init__(
         self, settings: AudioSettings | None = None, device: DeviceInfo | None = None
@@ -38,7 +39,7 @@ class StreamHandler:
         self._stream: pyaudio.Stream = PyAudioHandler.get_stream(
             self.settings, callback=self._callback
         )
-        self._stream_buffer: StreamBuffer = StreamBuffer()
+        self._stream_buffer: ArrayBuffer = ArrayBuffer()
         logger.info("TuneStream initialized")
 
     def start(self) -> None:
@@ -126,8 +127,10 @@ class StreamHandler:
         min_val: float = float(normalized_audio.min())
 
         if max_val > 1.01 or min_val < -1.01:
-            raise RuntimeError(
-                f"Audio normalization failed: min={min_val}, max={max_val}"
-            )
+            logger.debug(f"Audio normalization failed: min={min_val}, max={max_val}")
 
-        return normalized_audio
+        clipped_normal_audio: npt.NDArray[np.float32] = np.clip(
+            normalized_audio, -1.0, 1.0
+        )
+
+        return clipped_normal_audio

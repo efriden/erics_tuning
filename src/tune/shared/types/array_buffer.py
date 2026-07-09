@@ -7,12 +7,12 @@ from logging import getLogger
 logger = getLogger(__name__)
 
 
-class StreamBuffer:
+class ArrayBuffer:
     """
-    Holds the latest chunk of data from a TuneStream in a threadsafe way.
+    Holds the latest chunk of data in a threadsafe way.
 
     Reading is non-destructive, so readers always get the latest chunk of
-    audio data.
+    data.
     """
 
     _chunk: npt.NDArray[np.float32] | None

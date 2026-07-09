@@ -1,5 +1,4 @@
 from typing import Any
-from pyaudio import paFloat32, paInt16, paInt32
 import yaml
 import numpy as np
 
@@ -9,30 +8,12 @@ from tune.shared.util.type_registry import (
     resolve_numpy_dtype,
     resolve_pyaudio_format,
     NumpyScalarType,
-    PyAudioFormat,
 )
+from tune.shared.types.settings_specs import TopicSpec, AudioSettings
 
-from dataclasses import dataclass
 from logging import getLogger, Logger
 
 logger: Logger = getLogger(name=__name__)
-
-
-@dataclass
-class AudioSettings:
-    buffer_size: int
-    pyaudio_format: int
-    n_channels: int
-    samplerate: int
-
-
-@dataclass(frozen=True)
-class TopicSpec:
-    label: str
-    payload_type: type
-    dtype: NumpyScalarType | None = None
-    ndim: int | None = None
-    max_shape: tuple | None = None
 
 
 def get_settings(header: str | None = None) -> dict:

@@ -1,4 +1,3 @@
-import pyqtgraph as pg
 import numpy as np
 import numpy.typing as npt
 from typing import Callable, cast
@@ -26,4 +25,3 @@ class FourierPanel(AbstractTunePanel):
         assert isinstance(data, np.ndarray) and data.shape[0] == 2
         xy = cast(npt.NDArray[np.float32], data)
         self.plot_data_items["transform"].setData(xy[0], xy[1])
-

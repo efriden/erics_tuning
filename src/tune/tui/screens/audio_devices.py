@@ -1,9 +1,6 @@
 """This file is a little bit of a mess - needs to be cleaned up."""
 
 import logging
-import threading
-import numpy as np
-import pyaudio
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.screen import ModalScreen

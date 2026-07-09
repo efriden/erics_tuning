@@ -5,7 +5,7 @@ from pathlib import Path
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.screen import ModalScreen
-from textual.widgets import Button, Checkbox, Label, Static
+from textual.widgets import Button, Checkbox, Static
 
 logger = logging.getLogger(__name__)
 
@@ -161,27 +161,22 @@ class AnalyzerLayoutScreen(ModalScreen):
 
             yield Button("Apply", id="apply_layout")
 
-    def action_dismiss(self) -> None:  # type: ignore[override]
-        """Close without saving."""
-        logger.debug("AnalyzerLayoutScreen.action_dismiss() called")
-        self.app.pop_screen()
-
-    def action_focus_previous(self) -> None:  # type: ignore[override]
+    def action_focus_previous(self) -> None:
         """Move focus to previous widget."""
         self.focus_previous()
 
-    def action_focus_next(self) -> None:  # type: ignore[override]
+    def action_focus_next(self) -> None:
         """Move focus to next widget."""
         self.focus_next()
 
-    def on_mount(self) -> None:  # type: ignore[override]
+    def on_mount(self) -> None:
         """Auto-focus the first checkbox."""
         try:
             self.query_one("#chk_main_spectrum", Checkbox).focus()
         except Exception:
             logger.debug("AnalyzerLayoutScreen: failed to focus main checkbox")
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:  # type: ignore[override]
+    def on_button_pressed(self, event: Button.Pressed) -> None:
         logger.debug("AnalyzerLayoutScreen.on_button_pressed: %s", event.button.id)
         if event.button.id == "apply_layout":
             try:

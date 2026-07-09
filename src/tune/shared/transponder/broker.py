@@ -1,5 +1,6 @@
 import zmq
 import threading
+import signal
 
 from tune.shared.util.setup_logging import setup_logging, log_run_start
 from logging import getLogger
@@ -112,6 +113,9 @@ class Broker:
 
         self._ctx.term()  # blocks until all sockets are closed.
 
+        self.join()
+
+    def join(self) -> None:
         if self._data_thread:
             self._data_thread.join()
         if self._control_thread:
@@ -122,10 +126,16 @@ def main() -> None:
     setup_logging(root_level=10)
     log_run_start()
     broker = Broker()
+
+    def shutdown(sig=None, frame=None) -> None:
+        logger.info("shutting down")
+        broker.stop()
+
+    signal.signal(signal.SIGTERM, shutdown)
+    signal.signal(signal.SIGINT, shutdown)
     broker.start()
-    input("press key to shutdown broker")
-    broker.stop()
-    logger.info("Broker stopped.")
+    logger.info("Broker started successfully")
+    broker.join()
 
 
 if __name__ == "__main__":

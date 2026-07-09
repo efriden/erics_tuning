@@ -1,4 +1,3 @@
-from tune.shared.audio.pyaudio_handler import PyAudioHandler
 from tune.shared.audio.stream_handler import StreamHandler
 from tune.shared.audio.device_info import DeviceInfo
 from tune.shared.util.config_loader import AudioSettings
@@ -11,9 +10,6 @@ from textual.reactive import reactive
 from rich.text import Text
 
 import pyaudio
-import numpy as np
-
-from threading import Thread, Event
 
 # todo: move this to config.yaml
 MONITOR_AUDIO_SETTINGS: AudioSettings = AudioSettings(
