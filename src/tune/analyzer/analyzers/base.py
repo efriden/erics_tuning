@@ -1,60 +1,56 @@
-from typing import Callable, Any
+from numpy.typing import NDArray
+from typing import Callable
 from abc import ABC, abstractmethod
-import numpy as np
-import numpy.typing as npt
 from threading import Thread, Event
 
-from logging import getLogger
-from tune.shared.util.config_loader import AudioSettings
-
-
-# todo: move to config.yaml
-DEFAULT_ANALYZER_SLEEP_SECONDS: float = 0.02
-
-
-logger = getLogger((__name__))
+from tune.shared.util.output_manager import output_manager as out
+from tune.shared.util.config import config, AudioSettings
+from tune.shared.transponder.packet import AbstractPacket
 
 
 class AbstractAnalyzer(ABC):
-    topic: str
-    _putter: Callable[[npt.NDArray], None]
-    _getter: Callable[[str], npt.NDArray[np.float32] | None]
+    packet: AbstractPacket
+    _putter: Callable[[AbstractPacket], None]
+    _getter: Callable[[], AbstractPacket | NDArray]
     thread: Thread
     shutdown_flag: Event
     sleep_time: float
     audio_settings: AudioSettings
 
-    def __init__(self, audio_settings: AudioSettings) -> None:
-        self.sleep_time = DEFAULT_ANALYZER_SLEEP_SECONDS
+    def __init__(
+        self,
+        audio_settings: AudioSettings | None = None,
+        sleep_time: float | None = None,
+    ) -> None:
+        self.sleep_time: float = (
+            sleep_time
+            if sleep_time is not None
+            else config.analyzer_defaults.sleep_seconds
+        )
+        self.audio_settings: AudioSettings = (
+            audio_settings if audio_settings is not None else config.audio_settings
+        )
         self.shutdown_flag = Event()
-        self.audio_settings = audio_settings
 
-    def register_out(self, f: Callable[[str, Any], None]) -> None:
-        """
-        A callable that takes a payload object, stamps it with the correct topic and lets
-        the handler send it to transponder and relevant internal buffers.
+    def register_out(self, f: Callable[[AbstractPacket], None]) -> None:
+        out.debug(f"register_out f={f!r}")
+        self._putter = f
 
-        f: a 'put' method on the parent handler.
-
-        """
-        logger.debug(f"register_out f={f!r}")
-        self._putter = lambda o: f(self.topic, o)
-
-    def register_in(self, f: Callable[[str], npt.NDArray[np.float32] | None]) -> None:
-        logger.debug(f"register_in f={f!r}")
+    def register_in(self, f: Callable[[], AbstractPacket | NDArray]) -> None:
+        out.debug(f"register_in f={f!r}")
         self._getter = f
 
     def start(self) -> None:
-        logger.debug("start")
+        out.debug("start")
         self.thread = Thread(
             target=self._run,
-            name=f"{self.topic}-analyzer",
+            name=f"{self.packet.topic}-analyzer",
         )
 
         self.thread.start()
 
     def stop(self) -> None:
-        logger.debug("stop")
+        out.debug("stop")
         self.shutdown_flag.set()
 
         self.thread.join()

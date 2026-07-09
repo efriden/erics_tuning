@@ -1,18 +1,13 @@
-from tune.shared.types.settings_specs import AudioSettings
-from tune.shared.util.config_loader import get_audio_settings
-from tune.shared.types.array_buffer import ArrayBuffer
+from tune.shared.util.config import config, AudioSettings
+from tune.shared.util.output_manager import output_manager as out
+from tune.shared.audio.stream_buffer import StreamBuffer
 from tune.shared.audio.pyaudio_handler import PyAudioHandler
 from tune.shared.audio.device_info import DeviceInfo
 from typing import Any
+from pyaudio import Stream, paContinue
 
-
-import pyaudio
 import numpy as np
-import numpy.typing as npt
-
-from logging import getLogger
-
-logger = getLogger(__name__)
+from numpy.typing import NDArray
 
 
 class StreamHandler:
@@ -24,58 +19,60 @@ class StreamHandler:
 
     device: DeviceInfo
     settings: AudioSettings
-    _stream: pyaudio.Stream
+    _stream: Stream
     _stream_buffer: ArrayBuffer
 
     def __init__(
         self, settings: AudioSettings | None = None, device: DeviceInfo | None = None
     ) -> None:
-        logger.debug(f"__init__ settings={settings!r}, device={device!r}")
-        self.settings: AudioSettings = settings if settings else get_audio_settings()
-        logger.debug(f"AudioSettings: {self.settings}")
+        out.debug(f"__init__ settings={settings!r}, device={device!r}")
+        self.settings: AudioSettings = settings if settings else config.audio_settings
+        out.debug(f"AudioSettings: {self.settings}")
         self.device: DeviceInfo = (
             device if device else PyAudioHandler.get_default_device()
         )
-        self._stream: pyaudio.Stream = PyAudioHandler.get_stream(
-            self.settings, callback=self._callback
-        )
+        self._stream: Stream = PyAudioHandler.get_stream(callback=self._callback)
         self._stream_buffer: ArrayBuffer = ArrayBuffer()
-        logger.info("TuneStream initialized")
 
     def start(self) -> None:
-        logger.debug("start")
+        out.debug("start")
         self._stream.start_stream()
 
     def stop(self) -> None:
-        logger.debug("stop")
+        out.debug("stop")
         self._stream.stop_stream()
         self._stream.close()
 
     def swap_device(self, new_device: DeviceInfo) -> None:
-        logger.debug(f"swap_device new_device={new_device!r}")
+        out.debug(f"swap_device new_device={new_device!r}")
         self.stop()
-        new_stream: pyaudio.Stream = PyAudioHandler.get_stream(
-            self.settings, callback=self._callback, device=new_device
+        new_stream: Stream = PyAudioHandler.get_stream(
+            callback=self._callback, device=new_device
         )
-        self._stream = new_stream
-        self.device = new_device
+        self._stream: Stream = new_stream
+        self.device: DeviceInfo = new_device
         self.start()
 
-    def get_chunk(self) -> npt.NDArray[np.float32]:
+    def get_chunk(self) -> NDArray[np.float32]:
         """Threadsafe getter for audio chunk.
 
         Returns:
-            npt.NDArray[np.float32]: The latest chunk of audio_data. The data is not deleted, so another thread calling this function might get the same chunk.
+            NDArray[np.float32]: The latest chunk of audio_data. The data is not deleted, so another thread calling this function might get the same chunk.
 
         """
-        chunk = self._stream_buffer.read()
+        chunk: NDArray[np.float32] | None = self._stream_buffer.read()
         if chunk is None:
-            logger.warning("empty stream_buffer")
+            out.warning("empty stream_buffer")
             return np.array([])
         return chunk
 
     def get_level(self) -> int:
-        chunk = self.get_chunk()
+        """
+        Returns the current audio level as an int between 0 and 100,
+        based on a logarithmic scale of the root mean square of the
+        audio amplitude.
+        """
+        chunk: NDArray[np.float32] = self.get_chunk()
         if chunk.size == 0:
             return 0
         root_mean_square: float = np.sqrt(np.mean(chunk**2))
@@ -84,53 +81,26 @@ class StreamHandler:
         decibel_from_full_scale: float = 20 * np.log10(root_mean_square)
         level_f: float = (decibel_from_full_scale + 60) / 60 * 100
         level: int = int(np.clip(level_f, 0, 100))
-        logger.debug(level)
         return level
 
     def _callback(self, in_data, frame_count, time_info, status) -> tuple[Any, Any]:
-        audio_data: npt.NDArray[np.float32] = self._convert(
-            in_data, self.settings.pyaudio_format
-        )
+        """
+        Callback function for the PyAudio instance. Weird typing is because of
+        the limitations of interaction with the C layer.
+        """
+        chunk: NDArray[np.float32] = np.frombuffer(buffer=in_data, dtype=np.float32)
 
-        self._stream_buffer.update(audio_data)
+        max_val: float = float(chunk.max())
+        min_val: float = float(chunk.min())
+
+        if (
+            max_val > 1.2 or min_val < -1.2
+        ):  # Wide gap, because this happens surprisingly often.
+            raise RuntimeError(
+                f"Audio normalization failed: min={min_val}, max={max_val}"
+            )
+
+        self._stream_buffer.update(chunk)
 
         # in input-only streams, the first value of return tuple is ignored
-        return (None, pyaudio.paContinue)
-
-    def _convert(self, in_data: bytes, in_format: int) -> npt.NDArray[np.float32]:
-        """
-        converts bytes in whatever format used by pyaudio (from user settings) into a normalized float32 numpy array.
-        """
-        FORMAT_TO_DTYPE_MAP: dict[int, type[np.generic]] = {
-            pyaudio.paFloat32: np.float32,
-            pyaudio.paInt32: np.int32,
-            pyaudio.paInt16: np.int16,
-        }
-
-        DIVISORS: dict[int, float] = {
-            pyaudio.paFloat32: 1.0,
-            pyaudio.paInt32: 2147483648.0,
-            pyaudio.paInt16: 32768.0,
-        }
-
-        if in_format not in FORMAT_TO_DTYPE_MAP:
-            raise RuntimeError(f"Unknown pyaudio format: {in_format}")
-
-        np_format: type[np.generic] = FORMAT_TO_DTYPE_MAP[in_format]
-        divisor: float = DIVISORS[in_format]
-
-        raw_audio: npt.NDArray[np.generic] = np.frombuffer(in_data, dtype=np_format)
-        converted_audio: npt.NDArray[np.float32] = raw_audio.astype(np.float32)
-        normalized_audio: npt.NDArray[np.float32] = converted_audio / divisor
-
-        max_val: float = float(normalized_audio.max())
-        min_val: float = float(normalized_audio.min())
-
-        if max_val > 1.01 or min_val < -1.01:
-            logger.debug(f"Audio normalization failed: min={min_val}, max={max_val}")
-
-        clipped_normal_audio: npt.NDArray[np.float32] = np.clip(
-            normalized_audio, -1.0, 1.0
-        )
-
-        return clipped_normal_audio
+        return (None, paContinue)

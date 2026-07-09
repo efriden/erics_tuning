@@ -1,7 +1,6 @@
 audio_settings:
   buffer_size: 1024
-  pyaudio_format: 'paFloat32'
-  n_channels: 1
+  channels: 1
   samplerate: 44100
 
 range_presets:
@@ -17,51 +16,13 @@ range_presets:
   Cello: [57.0, 240.0]
   Guitar: [75.0, 350.0]
 
-visualizations:
-  Main Spectrum:
-    default: true
-  Pitch Confidence Scatter:
-    default: true
-  Envelope:
-    default: false
-  Spectrogram:
-    default: false
+analyzer:
+  default_sleep_seconds: 0.02
 
-zmq:
-  data_address: 'tcp://127.0.0.1:5555'
-  control_address: 'tcp://127.0.0.1:5556'
-
-topics:
-  fft:
-    payload_type: ndarray
-    dtype: float32
-    ndim: 2
-    max_shape: [2, 8192]
-  string:
-    payload_type: str
-  analyzer_status:
-    payload_type: str
-  visualizer_status:
-    payload_type: str
-  broker_status:
-    payload_type: str
-  pitch:
-    payload_type: ndarray
-    dtype: float32
-    ndim: 1
-    max_shape: [2,]
-  peaks:
-    payload_type: ndarray
-    dtype: float32
-    ndim: 1
-    max_shape: [2,]
-  peak_parameters:
-    payload_type: ndarray
-    dtype: float32
-    ndim: 1
-    max_shape: [3,]
-  piano_string:
-    payload_type: ndarray
-    dtype: float32
-    ndim: 1
-    max_shape: [2,]
+zmq_settings:
+  pub_data_uri: 'tcp://127.0.0.1:5555'
+  sub_data_uri: 'tcp://127.0.0.1:5556'
+  pub_control_uri: 'tcp://127.0.0.1:5557'
+  sub_control_uri: 'tcp://127.0.0.1:5558'
+  sub_poller_timeout_ms: 100
+  pub_sleep_seconds: 0.01
