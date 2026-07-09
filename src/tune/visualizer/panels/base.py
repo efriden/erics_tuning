@@ -1,28 +1,19 @@
 from abc import ABC, abstractmethod
 from typing import Callable
-import numpy as np
-from dataclasses import dataclass, field
 import pyqtgraph as pg
+
+from tune.shared.types.settings_specs import PanelSettings
+
 from logging import getLogger
 
 logger = getLogger(__name__)
-
-
-@dataclass
-class PanelSettings:
-    name: str
-    title: str = "untitled"
-    y_range: tuple[int, int] | None = None
-    x_range: tuple[int, int] | None = None
-    labels: dict[str, str] = field(default_factory=dict)
-    show_x_grid: bool = True
-    show_y_grid: bool = True
 
 
 class AbstractTunePanel(ABC):
     name: str
     get: Callable[[str], object]
     plot_item: pg.PlotItem
+    # not all panels will have plotdataitems, this should probably change.
     plot_data_items: dict[str, pg.PlotDataItem]
 
     def __init__(

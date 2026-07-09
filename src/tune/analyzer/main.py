@@ -10,26 +10,41 @@ from tune.shared.transponder.packet import AbstractPacket
 from tune.shared.util.output_manager import output_manager as out
 from tune.analyzer.analyzers.base import AbstractAnalyzer
 from tune.analyzer.analyzers.normalized_fft import NormalizedFFT
+from tune.analyzer.analyzers.peak_detection import PeakDetection
+
 
 
 class AnalyzerHandler:
+    """
+    A handler for a set of analyzer objects.
+
+    Each analyzer object does its own set of calculations, in its own thread.
+
+    This handler manages datastreams in and out of these analyzers, and holds
+    a transponder object for communication with the rest of the application.
+    """
+
     _stream: StreamHandler
     _transponder: Transponder
     _analyzers: list[AbstractAnalyzer]
     _shutdown_flag: Event
+    _internal_buffers: dict[str, ArrayBuffer]
 
     def __init__(self, stream: StreamHandler | None = None) -> None:
-        out.debug(f"__init__ stream={stream!r}")
         self._shutdown_flag = Event()
         self._stream: StreamHandler = stream if stream else StreamHandler()
         self._transponder: Transponder = Transponder(pubs=["fft"], subs=[])
         self._analyzers: list[AbstractAnalyzer] = []
+        self._internal_buffers = {}
 
     def add_analyzer(self, analyzer: AbstractAnalyzer) -> None:
         out.debug(f"add_analyzer analyzer={analyzer!r}")
         self._analyzers.append(analyzer)
-        analyzer.register_in(self._stream.get_chunk)
+        analyzer.register_in(self.get)
         analyzer.register_out(self.put)
+
+    def add_internal_buffer(self, topic: str) -> None:
+        self._internal_buffers[topic] = ArrayBuffer()
 
     def start(self) -> None:
         out.debug("start")
@@ -53,8 +68,27 @@ class AnalyzerHandler:
         out.debug("wait")
         self._shutdown_flag.wait()
 
-    def put(self, packet: AbstractPacket) -> None:
-        self._transponder.put(packet)
+    def get(self, topic: str) -> npt.NDArray[np.float32] | None:
+        if topic == "audio_chunk":
+            return self.get_chunk()
+        internal_buffer: ArrayBuffer | None = self._internal_buffers.get(topic)
+        if internal_buffer is not None:
+            data = internal_buffer.read()
+            return data
+        raise RuntimeError("Bad topic in analyzer.")
+
+    def get_chunk(self) -> npt.NDArray[np.float32]:
+        return self._stream.get_chunk()
+
+    def put(self, topic, payload) -> None:
+        internal_buffer: ArrayBuffer | None = self._internal_buffers.get(topic)
+        if internal_buffer is not None:
+            internal_buffer.update(payload)
+        self._transponder.put(topic, payload)
+
+    @property
+    def audio_settings(self) -> AudioSettings:
+        return self._stream.settings
 
 
 def main() -> None:
@@ -65,6 +99,8 @@ def main() -> None:
 
     out.debug("Creating subanalyzer objects.")
     analyzer_handler.add_analyzer(analyzer=NormalizedFFT())
+
+    manager.add_internal_buffer("fft")
 
     out.debug("Starting TuneAnalyzer object (will also start pyaudio stream)")
     try:

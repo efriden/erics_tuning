@@ -1,9 +1,11 @@
 from textual.containers import VerticalScroll
-from textual.widgets import Button, Placeholder, Header, Footer, TabbedContent, TabPane
+from textual.widgets import Button, Header, Footer, TabbedContent, TabPane
 from textual.screen import Screen
 from textual.app import ComposeResult
 
 from tune.tui.widgets.process_window import ProcessWindow, ProcessConfig
+from tune.tui.widgets.piano_frequencies import PianoFrequencies
+from tune.tui.widgets.current_note import CurrentNote
 
 from logging import getLogger
 
@@ -30,11 +32,14 @@ class MainScreen(Screen):
 
         with TabbedContent():
             with TabPane("Main Dash"):
-                yield Placeholder("Main Dash")
+                yield CurrentNote()
+                yield Button("Select Device")
             with TabPane("Process Screen"):
                 with VerticalScroll(id="process-container"):
                     for config in PROCESS_CONFIGS:
                         yield ProcessWindow(config)
+            with TabPane("Piano Key Frequencies"):
+                yield PianoFrequencies()
 
         yield Footer()
 

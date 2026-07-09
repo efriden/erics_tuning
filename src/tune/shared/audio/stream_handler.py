@@ -20,7 +20,7 @@ class StreamHandler:
     device: DeviceInfo
     settings: AudioSettings
     _stream: Stream
-    _stream_buffer: StreamBuffer
+    _stream_buffer: ArrayBuffer
 
     def __init__(
         self, settings: AudioSettings | None = None, device: DeviceInfo | None = None
@@ -32,8 +32,7 @@ class StreamHandler:
             device if device else PyAudioHandler.get_default_device()
         )
         self._stream: Stream = PyAudioHandler.get_stream(callback=self._callback)
-        self._stream_buffer: StreamBuffer = StreamBuffer()
-        out.info("StreamHandler initialized")
+        self._stream_buffer: ArrayBuffer = ArrayBuffer()
 
     def start(self) -> None:
         out.debug("start")

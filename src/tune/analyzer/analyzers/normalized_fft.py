@@ -23,7 +23,9 @@ class NormalizedFFT(AbstractAnalyzer):
         out.debug("_run")
         while not self.shutdown_flag.is_set():
             sleep(self.sleep_time)
-            audio_chunk: np.ndarray = self._getter()
+            audio_chunk: np.ndarray | None = self._getter("audio_chunk")
+            if audio_chunk is None:
+                continue
             chunk_size: int = audio_chunk.size
             if chunk_size == 0:
                 out.warning("received empty audio chunk")
